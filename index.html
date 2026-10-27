@@ -2,13 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>Tetris</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="game-wrap">
-    <h1>TETRIS</h1>
+    <div class="brand">
+      <span class="brand-mark">&#10038;</span>
+      <h1>TETRIS</h1>
+    </div>
+    <p class="brand-sub">Combat Antisemitism Movement &mdash; CEO Edition</p>
     <div class="layout">
       <div class="side-panel">
         <div class="panel-box">
@@ -23,7 +30,9 @@
       </div>
 
       <div class="board-wrap">
+        <div id="face-ghost" class="face-ghost"></div>
         <canvas id="board" width="300" height="600"></canvas>
+        <button id="pause-btn" class="pause-btn" aria-label="Pause">&#10074;&#10074;</button>
         <div id="overlay" class="overlay hidden">
           <div id="overlay-text">Press Start</div>
           <button id="start-btn">Start Game</button>
@@ -46,6 +55,19 @@
             <li>P Pause</li>
           </ul>
         </div>
+      </div>
+    </div>
+
+    <div id="touch-controls" class="touch-controls">
+      <div class="touch-group touch-dpad">
+        <button id="t-left" class="touch-btn" aria-label="Move left">&larr;</button>
+        <button id="t-down" class="touch-btn" aria-label="Soft drop">&darr;</button>
+        <button id="t-right" class="touch-btn" aria-label="Move right">&rarr;</button>
+      </div>
+      <div class="touch-group touch-actions">
+        <button id="t-hold" class="touch-btn touch-small" aria-label="Hold">Hold</button>
+        <button id="t-rotate" class="touch-btn touch-big" aria-label="Rotate">&#8635;</button>
+        <button id="t-drop" class="touch-btn touch-small" aria-label="Hard drop">Drop</button>
       </div>
     </div>
   </div>

@@ -2,6 +2,10 @@
   const COLS = 10;
   const ROWS = 20;
   const CELL = 30;
+  const FACE_COLS = COLS;
+  const FACE_ROWS = 10;
+  const FACE_ROW_OFFSET = Math.floor((ROWS - FACE_ROWS) / 2);
+  const FACE_IMAGE_SRC = "assets/sacha-roytman.png";
 
   const COLORS = {
     I: "#4dd9e8",
@@ -98,9 +102,83 @@
 
       this.startBtn.addEventListener("click", () => this.start());
       document.addEventListener("keydown", (e) => this.handleKey(e));
+      document.getElementById("pause-btn").addEventListener("click", () => this.togglePause());
+
+      this.faceColors = null;
+      this.loadFaceImage();
+      this.setupTouchControls();
+      this.setupHiDPI();
 
       this.reset();
       this.draw();
+    }
+
+    setupHiDPI() {
+      const dpr = window.devicePixelRatio || 1;
+      for (const canvas of [this.boardCanvas, this.nextCanvas, this.holdCanvas]) {
+        const w = canvas.width;
+        const h = canvas.height;
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        canvas.getContext("2d").scale(dpr, dpr);
+      }
+    }
+
+    loadFaceImage() {
+      const img = new Image();
+      img.onload = () => {
+        const off = document.createElement("canvas");
+        off.width = FACE_COLS;
+        off.height = FACE_ROWS;
+        const octx = off.getContext("2d", { willReadFrequently: true });
+        octx.drawImage(img, 0, 0, FACE_COLS, FACE_ROWS);
+        const data = octx.getImageData(0, 0, FACE_COLS, FACE_ROWS).data;
+        const colors = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+        for (let fy = 0; fy < FACE_ROWS; fy++) {
+          for (let fx = 0; fx < FACE_COLS; fx++) {
+            const idx = (fy * FACE_COLS + fx) * 4;
+            colors[FACE_ROW_OFFSET + fy][fx] = `rgb(${data[idx]},${data[idx + 1]},${data[idx + 2]})`;
+          }
+        }
+        this.faceColors = colors;
+      };
+      img.src = FACE_IMAGE_SRC;
+    }
+
+    setupTouchControls() {
+      const bind = (id, action, { repeat = false, interval = 120 } = {}) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        let timer = null;
+        const fire = () => {
+          if (!this.running || this.paused || this.gameOver) return;
+          action();
+          this.draw();
+        };
+        const start = (e) => {
+          e.preventDefault();
+          fire();
+          if (repeat) timer = setInterval(fire, interval);
+        };
+        const end = (e) => {
+          e.preventDefault();
+          if (timer) {
+            clearInterval(timer);
+            timer = null;
+          }
+        };
+        el.addEventListener("pointerdown", start);
+        el.addEventListener("pointerup", end);
+        el.addEventListener("pointercancel", end);
+        el.addEventListener("pointerleave", end);
+      };
+
+      bind("t-left", () => this.move(-1), { repeat: true, interval: 130 });
+      bind("t-right", () => this.move(1), { repeat: true, interval: 130 });
+      bind("t-down", () => this.softDrop(), { repeat: true, interval: 60 });
+      bind("t-rotate", () => this.rotate());
+      bind("t-drop", () => this.hardDrop());
+      bind("t-hold", () => this.hold());
     }
 
     reset() {
@@ -336,12 +414,15 @@
 
     draw() {
       const ctx = this.boardCtx;
-      ctx.clearRect(0, 0, this.boardCanvas.width, this.boardCanvas.height);
+      ctx.clearRect(0, 0, COLS * CELL, ROWS * CELL);
 
       for (let y = 0; y < ROWS; y++) {
         for (let x = 0; x < COLS; x++) {
           const cell = this.board[y][x];
-          if (cell) this.drawCell(ctx, x, y, COLORS[cell], CELL);
+          if (cell) {
+            const faceColor = this.faceColors && this.faceColors[y][x];
+            this.drawCell(ctx, x, y, faceColor || COLORS[cell], CELL);
+          }
         }
       }
 
@@ -359,12 +440,14 @@
     }
 
     drawPreview(ctx, canvas, type) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const logicalW = 100;
+      const logicalH = 100;
+      ctx.clearRect(0, 0, logicalW, logicalH);
       if (!type) return;
       const cells = normalize(SHAPES[type]);
       const size = 20;
-      const offsetX = (canvas.width - 4 * size) / 2;
-      const offsetY = (canvas.height - 2 * size) / 2;
+      const offsetX = (logicalW - 4 * size) / 2;
+      const offsetY = (logicalH - 2 * size) / 2;
       ctx.save();
       ctx.translate(offsetX, offsetY);
       for (const [cx, cy] of cells) {
@@ -377,6 +460,7 @@
 
   window.addEventListener("DOMContentLoaded", () => {
     const game = new Game();
+    window.game = game;
     game.showOverlay("Press Start to Play");
   });
 })();

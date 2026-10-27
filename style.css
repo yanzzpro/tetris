@@ -185,6 +185,7 @@ h1 {
   align-items: center;
   justify-content: center;
   gap: 16px;
+  z-index: 3;
 }
 
 .overlay.hidden {

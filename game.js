@@ -6,6 +6,8 @@
   const FACE_ROWS = 10;
   const FACE_ROW_OFFSET = Math.floor((ROWS - FACE_ROWS) / 2);
   const FACE_IMAGE_SRC = "assets/sacha-roytman.png";
+  const REVEAL_CELLS = FACE_COLS * FACE_ROWS;
+  const LOCKS_TO_FULL_REVEAL = 160;
 
   const COLORS = {
     I: "#4dd9e8",
@@ -92,6 +94,8 @@
       this.nextCtx = this.nextCanvas.getContext("2d");
       this.holdCanvas = document.getElementById("hold");
       this.holdCtx = this.holdCanvas.getContext("2d");
+      this.revealCanvas = document.getElementById("reveal");
+      this.revealCtx = this.revealCanvas.getContext("2d");
 
       this.scoreEl = document.getElementById("score");
       this.linesEl = document.getElementById("lines");
@@ -105,6 +109,8 @@
       document.getElementById("pause-btn").addEventListener("click", () => this.togglePause());
 
       this.faceColors = null;
+      this.revealGrid = null;
+      this.totalLocked = 0;
       this.loadFaceImage();
       this.setupTouchControls();
       this.setupHiDPI();
@@ -115,7 +121,7 @@
 
     setupHiDPI() {
       const dpr = window.devicePixelRatio || 1;
-      for (const canvas of [this.boardCanvas, this.nextCanvas, this.holdCanvas]) {
+      for (const canvas of [this.boardCanvas, this.nextCanvas, this.holdCanvas, this.revealCanvas]) {
         const w = canvas.width;
         const h = canvas.height;
         canvas.width = w * dpr;
@@ -134,13 +140,18 @@
         octx.drawImage(img, 0, 0, FACE_COLS, FACE_ROWS);
         const data = octx.getImageData(0, 0, FACE_COLS, FACE_ROWS).data;
         const colors = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+        const flat = new Array(REVEAL_CELLS);
         for (let fy = 0; fy < FACE_ROWS; fy++) {
           for (let fx = 0; fx < FACE_COLS; fx++) {
             const idx = (fy * FACE_COLS + fx) * 4;
-            colors[FACE_ROW_OFFSET + fy][fx] = `rgb(${data[idx]},${data[idx + 1]},${data[idx + 2]})`;
+            const rgb = `rgb(${data[idx]},${data[idx + 1]},${data[idx + 2]})`;
+            colors[FACE_ROW_OFFSET + fy][fx] = rgb;
+            flat[fy * FACE_COLS + fx] = rgb;
           }
         }
         this.faceColors = colors;
+        this.revealGrid = flat;
+        this.draw();
       };
       img.src = FACE_IMAGE_SRC;
     }
@@ -196,6 +207,7 @@
       this.running = false;
       this.paused = false;
       this.gameOver = false;
+      this.totalLocked = 0;
       this.updateStats();
     }
 
@@ -240,7 +252,10 @@
       for (const [cx, cy] of cells) {
         const x = this.current.x + cx;
         const y = this.current.y + cy;
-        if (y >= 0) this.board[y][x] = this.current.type;
+        if (y >= 0) {
+          this.board[y][x] = this.current.type;
+          this.totalLocked++;
+        }
       }
       this.clearLines();
       this.spawnNext();
@@ -437,6 +452,23 @@
 
       this.drawPreview(this.nextCtx, this.nextCanvas, this.bag[0]);
       this.drawPreview(this.holdCtx, this.holdCanvas, this.holdType);
+      this.drawReveal();
+    }
+
+    drawReveal() {
+      const ctx = this.revealCtx;
+      const size = 100 / FACE_COLS;
+      ctx.clearRect(0, 0, 100, 100);
+      const revealedCount = this.revealGrid
+        ? Math.min(REVEAL_CELLS, Math.floor((this.totalLocked / LOCKS_TO_FULL_REVEAL) * REVEAL_CELLS))
+        : 0;
+      for (let i = 0; i < REVEAL_CELLS; i++) {
+        const col = i % FACE_COLS;
+        const row = Math.floor(i / FACE_COLS);
+        const color = i < revealedCount ? this.revealGrid[i] : "rgba(217,164,65,0.08)";
+        ctx.fillStyle = color;
+        ctx.fillRect(col * size, row * size, size - 0.5, size - 0.5);
+      }
     }
 
     drawPreview(ctx, canvas, type) {

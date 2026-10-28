@@ -126,7 +126,7 @@ h1 {
   color: var(--accent);
 }
 
-#hold, #next {
+#hold, #next, #reveal {
   background: #000;
   border-radius: 4px;
   display: block;
@@ -276,7 +276,7 @@ h1 {
     gap: 6px;
   }
 
-  #hold, #next {
+  #hold, #next, #reveal {
     width: 44px;
     height: 44px;
   }
